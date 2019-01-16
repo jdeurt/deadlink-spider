@@ -124,10 +124,30 @@ class Spider {
                             status: resp.statusCode,
                             next: []
                         });
-                    } else {
+                    } else if (!resp.body.startsWith("<br />\n<b>")) {
                         this.log(`${url} responded with 2XX. Scanning for URLs...`);
 
-                        let next = [...new Set(resp.body.match(/(http|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?/g))].filter(url => !this.urls.includes(url) && new URL(url).hostname == this.domain);
+                        let next = [...new Set(
+                            resp.body.match(/(http(s|):)?\/\/?([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?[^():\d+)]\b/g)
+                        )].filter(nextUrl => {
+                            let temp;
+                            if (nextUrl.startsWith("//")) {
+                                temp = "http:" + nextUrl;
+                            } else if (nextUrl.startsWith("/")) {
+                                temp = url + nextUrl;
+                            } else {
+                                temp = nextUrl;
+                            }
+                            return (!this.urls.includes(temp) && new URL(temp).hostname == this.domain)
+                        }).map(nextUrl => {
+                            if (nextUrl.startsWith("//")) {
+                                return "http:" + nextUrl;
+                            } else if (nextUrl.startsWith("/")) {
+                                return url + nextUrl;
+                            } else {
+                                return nextUrl;
+                            }
+                        });
 
                         this.log(`Found URLs:\n${next}`);
 
@@ -141,7 +161,6 @@ class Spider {
                 }
             }).catch(err => {
                 this.log(`Error when attempting to work on ${url}`);
-                this.log(err);
 
                 resolve({
                     url: url,
