@@ -10,14 +10,14 @@ linkChecker.start();
 
 process.on("exit", () => {
     linkChecker.stop();
-    fs.writeFileSync(`./output/crawl-path_${Date.now()}.json`, JSON.stringify(linkChecker.crawlPath));
-    fs.writeFileSync(`./output/report_${Date.now()}.txt`, `OK: ${linkChecker.report.ok.length}\n${linkChecker.report.ok.join("\n")}\n\nWARN: ${linkChecker.report.warn.length}\n${linkChecker.report.warn.join("\n")}\n\nERROR: ${linkChecker.report.error.length}\n${linkChecker.report.error.join("\n")}`);
+    fs.writeFileSync(`./output/crawl-path_${process.env.DOMAIN.replace(/\//g, "")}_${Date.now()}.json`, JSON.stringify(linkChecker.crawlPath));
+    fs.writeFileSync(`./output/report_${process.env.DOMAIN.replace(/\//g, "")}_${Date.now()}.txt`, `OK: ${linkChecker.report.ok.length}\n${linkChecker.report.ok.join("\n")}\n\nWARN: ${linkChecker.report.warn.length}\n${linkChecker.report.warn.join("\n")}\n\nERROR: ${linkChecker.report.error.length}\n${linkChecker.report.error.join("\n")}`);
     process.exit();
 });
 
 process.on("SIGINT", () => {
     linkChecker.stop();
-    fs.writeFileSync(`./output/crawl-path_${Date.now()}.json`, JSON.stringify(linkChecker.crawlPath));
-    fs.writeFileSync(`./output/report_${Date.now()}.txt`, `OK: ${linkChecker.report.ok.length}\n${linkChecker.report.ok.join("\n")}\n\nWARN: ${linkChecker.report.warn.length}\n${linkChecker.report.warn.join("\n")}\n\nERROR: ${linkChecker.report.error.length}\n${linkChecker.report.error.join("\n")}`);
+    fs.writeFileSync(`./output/crawl-path_${process.env.DOMAIN.replace(/\//g, "")}_${Date.now()}.json`, JSON.stringify(linkChecker.crawlPath));
+    fs.writeFileSync(`./output/report_${process.env.DOMAIN.replace(/\//g, "")}_${Date.now()}.txt`, `OK: ${linkChecker.report.ok.length}\n${linkChecker.report.ok.join("\n")}\n\nWARN: ${linkChecker.report.warn.length}\n${linkChecker.report.warn.join("\n")}\n\nERROR: ${linkChecker.report.error.length}\n${linkChecker.report.error.join("\n")}`);
     process.exit();
 });
