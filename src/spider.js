@@ -1,4 +1,5 @@
 const got = require("got");
+const cheerio = require("cheerio");
 
 class Spider {
     /**
@@ -115,7 +116,7 @@ class Spider {
                         status: resp.statusCode
                     });
                 } else {
-                    if (!resp.headers["content-type"].includes("text")) {
+                    if (!resp.headers["content-type"].includes("html")) {
                         this.log(`${url} responded with 2XX but isn't readable.`);
 
                         resolve({
@@ -124,12 +125,20 @@ class Spider {
                             status: resp.statusCode,
                             next: []
                         });
-                    } else if (!resp.body.startsWith("<br />\n<b>")) {
+                    } else {
                         this.log(`${url} responded with 2XX. Scanning for URLs...`);
 
-                        let next = [...new Set(
-                            resp.body.match(/(http(s|):)?\/\/?([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?[^():\d+)]\b/g)
-                        )].filter(nextUrl => {
+                        let urls = [];
+
+                        let $ = cheerio.load(resp.body);
+                        $("*[href*='.'], *[src*='.']").each((i, elem) => {
+                            let url = $(elem).attr("href") || $(elem).attr("src");
+                            if (!urls.includes(url)) {
+                                urls.push(url);
+                            }
+                        });
+
+                        let next = urls.filter(nextUrl => {
                             let temp;
                             if (nextUrl.startsWith("//")) {
                                 temp = "http:" + nextUrl;
@@ -161,6 +170,7 @@ class Spider {
                 }
             }).catch(err => {
                 this.log(`Error when attempting to work on ${url}`);
+                this.log(err);
 
                 resolve({
                     url: url,
