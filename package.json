@@ -3,9 +3,6 @@
   "version": "1.0.0",
   "description": "Crawls a website and checks all links to see if they're broken.",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "author": "",
   "license": "ISC",
   "dependencies": {
