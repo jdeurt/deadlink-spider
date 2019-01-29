@@ -9,20 +9,23 @@ A simple NodeJS spider that crawls a website in search of bad links.
 5) Create your own .env file following the format of .env.example.
 
 ## Run
-`node .`
+```bash
+node . {URL} {BLACKLIST}
+```
+where {BLACKLIST} is a list of words that should never appear in scanned URLs separated by spaces.
 
 ## Output
-The output of each test will be saved to a crawl-path_{DATE}.json file and a report_{DATE}.txt file.
+The output of each test will be saved to a crawl-path_{DOMAIN}_{DATE}.json file and a report_{DOMAIN}_{DATE}.txt file.
 
 The report file will follow the following format:
 ```
-OK: {number}
+OK {number}:
 {URLs}
 
-WARN: {number}
+WARN {number}:
 {URLs}
 
-ERROR: {number}
+ERROR {number}:
 {URLs}
 ```
 URLs under the OK section are all good. Ones under the WARN section have minor problems but aren't necessarily broken. URLs under the ERROR section are either non-responsive to a GET request or return an error.
