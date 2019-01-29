@@ -1,15 +1,12 @@
 const Spider = require("./src/spider");
-const dotenv = require("dotenv");
 const fs = require("fs");
 
 const formatReport = require("./src/format-report");
 
-dotenv.load(".env");
-let startURL = process.env.DOMAIN;
-
 if (process.argv.length > 2) startURL = process.argv[2];
+if (process.argv.length > 3) blacklist = process.argv.slice(3);
 
-const linkChecker = new Spider(startURL, true);
+const linkChecker = new Spider(startURL, blacklist, true);
 
 linkChecker.start();
 

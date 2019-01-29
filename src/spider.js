@@ -5,10 +5,12 @@ class Spider {
     /**
      * Creates a Spider.
      * @param {string} domain The root domain of the website.
+     * @param {string[]} blacklist An array of URLs that should NEVER appear in the scan.
      * @param {boolean} verbose Whether or not to log steps to the console.
      */
-    constructor(domain, verbose = false) {
+    constructor(domain, blacklist, verbose = false) {
         this.domain = new URL(domain).hostname;
+        this.blacklist = blacklist;
         this.verbose = verbose;
         this.crawlPath = [];
         this.urls = [];
@@ -114,6 +116,19 @@ class Spider {
                     referrer,
                     status: 0
                 })
+            }
+
+            let isBlacklisted = false;
+            this.blacklist.forEach(str => {
+                if (url.includes(str)) isBlacklisted = true;
+            });
+            if (isBlacklisted) {
+                return resolve({
+                    url: url,
+                    result: "ERROR",
+                    referrer,
+                    status: 0
+                });
             }
 
             got(url).then(resp => {
