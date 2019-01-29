@@ -21,5 +21,5 @@ module.exports = (report) => {
     });
     if (report.error.length == 0) error += "-- NONE --\n";
 
-    return `${ok}\n${warn}\n${error}\n\n${repo.omit.length} URLs ommited.}`;
+    return `${ok}\n${warn}\n${error}\n\n${report.omit.length} URLs ommited.`;
 };
