@@ -12,14 +12,14 @@ linkChecker.start();
 
 process.on("exit", () => {
     linkChecker.stop();
-    fs.writeFileSync(`./output/crawl-path_${process.env.DOMAIN.replace(/\//g, "")}_${Date.now()}.json`, JSON.stringify(linkChecker.crawlPath));
-    fs.writeFileSync(`./output/report_${process.env.DOMAIN.replace(/\//g, "")}_${Date.now()}.txt`, formatReport(linkChecker.report));
+    fs.writeFileSync(`./output/crawl-path_${startURL.replace(/\//g, "")}_${Date.now()}.json`, JSON.stringify(linkChecker.crawlPath));
+    fs.writeFileSync(`./output/report_${startURL.replace(/\//g, "")}_${Date.now()}.txt`, formatReport(linkChecker.report));
     process.exit();
 });
 
 process.on("SIGINT", () => {
     linkChecker.stop();
-    fs.writeFileSync(`./output/crawl-path_${process.env.DOMAIN.replace(/\//g, "")}_${Date.now()}.json`, JSON.stringify(linkChecker.crawlPath));
-    fs.writeFileSync(`./output/report_${process.env.DOMAIN.replace(/\//g, "")}_${Date.now()}.txt`, formatReport(linkChecker.report));
+    fs.writeFileSync(`./output/crawl-path_${startURL.replace(/\//g, "")}_${Date.now()}.json`, JSON.stringify(linkChecker.crawlPath));
+    fs.writeFileSync(`./output/report_${startURL.replace(/\//g, "")}_${Date.now()}.txt`, formatReport(linkChecker.report));
     process.exit();
 });
