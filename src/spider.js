@@ -17,6 +17,7 @@ class Spider {
             ok: [],
             warn: [],
             error: [],
+            omit: []
         }
     }
 
@@ -39,7 +40,7 @@ class Spider {
         this.working = true;
 
         this.log("Crawling root page...");
-        this.crawl("http://" + this.domain);
+        this.crawl("http://" + this.domain, this.domain);
     }
 
     /**
@@ -54,14 +55,14 @@ class Spider {
      * Loop function for crawling the website.
      * @param {string} url The URL to crawl.
      */
-    async crawl(url) {
+    async crawl(url, referrer) {
         if (!this.working) return;
 
-        let result = await this.crawlToSave(url);
+        let result = await this.crawlToSave(url, referrer);
 
         if (result.result === "OK") {
-            result.next.forEach(url => {
-                this.crawl(url);
+            result.next.forEach(nextUrl => {
+                this.crawl(nextUrl, url);
             });
         }
     }
@@ -75,7 +76,7 @@ class Spider {
         try {
             if (new URL(url).hostname != this.domain) isValidUrl = false;
         } catch (err) {
-            // means the URL isn't valid
+            // means the URL isn't valid and will be handled later
         }
 
         return isValidUrl;
@@ -84,12 +85,12 @@ class Spider {
     /**
      * Crawls to a URL and saves the output to the Spider's crawlPath.
      * @param {string} url The URL to crawl to.
-     * @returns {Promise<{url: string, result: "OK"|"WARN"|"ERROR", status: number, next?: Array<string>}>}
+     * @returns {Promise<{url: string, result: "OK"|"WARN"|"ERROR", referrer: string, status: number, next?: Array<string>}>}
      */
-    async crawlToSave(url) {
-        let result = await this.crawlTo(url);
+    async crawlToSave(url, referrer) {
+        let result = await this.crawlTo(url, referrer);
 
-        this.report[result.result.toLowerCase()].push(result.url);
+        this.report[result.result.toLowerCase()].push(result);
 
         this.crawlPath.push(result);
         return result;
@@ -98,35 +99,46 @@ class Spider {
     /**
      * Crawls to a url.
      * @param {string} url The URL to crawl to.
-     * @returns {Promise<{url: string, result: "OK"|"WARN"|"ERROR", status: number, next?: Array<string>}>}
+     * @returns {Promise<{url: string, result: "OK"|"WARN"|"ERROR", referrer: string, status: number, next?: Array<string>}>}
      */
-    async crawlTo(url) {
+    async crawlTo(url, referrer) {
         this.urls.push(url);
 
-        this.log(`Working on ${url}`);
+        this.log(`Working on ${url} (from ${referrer})`);
 
         return new Promise((resolve, reject) => {
+            if (!referrer.includes(this.domain)) {
+                return resolve({
+                    url: url,
+                    result: "OMIT",
+                    referrer,
+                    status: 0
+                })
+            }
+
             got(url).then(resp => {
                 if (resp.statusCode < 200 || resp.statusCode > 299) {
-                    this.log(`${url} responded with ${resp.statusCode}.`);
+                    this.log(`${url} responded with ${resp.statusCode} (from ${referrer}).`);
 
                     resolve({
                         url: url,
                         result: "WARN",
+                        referrer,
                         status: resp.statusCode
                     });
                 } else {
                     if (!resp.headers["content-type"].includes("html")) {
-                        this.log(`${url} responded with 2XX but isn't readable.`);
+                        this.log(`${url} responded with 2XX but isn't readable (from ${referrer}).`);
 
                         resolve({
                             url: url,
                             result: "OK",
+                            referrer,
                             status: resp.statusCode,
                             next: []
                         });
                     } else {
-                        this.log(`${url} responded with 2XX. Scanning for URLs...`);
+                        this.log(`${url} responded with 2XX. Scanning for URLs... (from ${referrer})`);
 
                         let urls = [];
 
@@ -147,7 +159,7 @@ class Spider {
                             } else {
                                 temp = nextUrl;
                             }
-                            return (!this.urls.includes(temp) && new URL(temp).hostname == this.domain)
+                            return (!this.urls.includes(temp))
                         }).map(nextUrl => {
                             if (nextUrl.startsWith("//")) {
                                 return "http:" + nextUrl;
@@ -163,18 +175,29 @@ class Spider {
                         resolve({
                             url: url,
                             result: "OK",
+                            referrer,
                             status: resp.statusCode,
                             next: next
                         });
                     }
                 }
             }).catch(err => {
-                this.log(`Error when attempting to work on ${url}`);
+                this.log(`Error when attempting to work on ${url} (from ${referrer}).`);
                 this.log(err);
+
+                if (url.toLowerCase().startsWith("mailto:") || url.toLowerCase().endsWith(".css")) {
+                    resolve({
+                        url: url,
+                        result: "OMIT",
+                        referrer,
+                        status: 0
+                    })
+                }
 
                 resolve({
                     url: url,
                     result: "ERROR",
+                    referrer,
                     status: 0
                 });
             });
