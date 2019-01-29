@@ -8,7 +8,9 @@ class Spider {
      * @param {string[]} blacklist An array of URLs that should NEVER appear in the scan.
      * @param {boolean} verbose Whether or not to log steps to the console.
      */
-    constructor(domain, blacklist, verbose = false) {
+    constructor(domain, blacklist = [], verbose = false) {
+        if (!domain.startsWith("http")) domain = "http://" + domain;
+
         this.domain = new URL(domain).hostname;
         this.blacklist = blacklist;
         this.verbose = verbose;
@@ -200,7 +202,7 @@ class Spider {
                 this.log(`Error when attempting to work on ${url} (from ${referrer}).`);
                 this.log(err);
 
-                if (url.toLowerCase().startsWith("mailto:") || url.toLowerCase().endsWith(".css")) {
+                if (url.toLowerCase().startsWith("mailto:") || url.toLowerCase().endsWith(".css") || url.toLowerCase().endsWith(".pdf")) {
                     resolve({
                         url: url,
                         result: "OMIT",

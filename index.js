@@ -3,6 +3,9 @@ const fs = require("fs");
 
 const formatReport = require("./src/format-report");
 
+let startURL = "";
+let blacklist = [];
+
 if (process.argv.length > 2) startURL = process.argv[2];
 if (process.argv.length > 3) blacklist = process.argv.slice(3);
 
