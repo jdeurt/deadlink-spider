@@ -25,6 +25,18 @@ class Spider {
         }
     }
 
+    async waitForIdle() {
+        return new Promise(resolve => {
+            let intervalID = setInterval(() => {
+                if (!this.working) {
+                    this.log("Spider is idle!");
+                    clearInterval(intervalID);
+                    resolve();
+                }
+            }, 1000);
+        });
+    }
+
     /**
      * If verbose mode is enabled, logs to console.
      * @param {any} content The content to log.
