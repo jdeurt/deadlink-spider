@@ -1,25 +1,53 @@
 /**
  * Formats a report and returns a string.
  * @param {{ok: Array<{url: string, result: "OK"|"WARN"|"ERROR", referrer: string, status: number, next?: Array<string>}>, warn: Array<{url: string, result: "OK"|"WARN"|"ERROR", referrer: string, status: number, next?: Array<string>}>, error: Array<{url: string, result: "OK"|"WARN"|"ERROR", referrer: string, status: number, next?: Array<string>}>}} report
+ * @param {string} host
  */
-module.exports = (report) => {
-    let ok = `OK (${report.ok.length}):\n`;
+module.exports = (report, host) => {
+    let okCodes = {};
+    let warnCodes = {};
+    let errorCodes = {};
+
     report.ok.forEach(result => {
-        ok += `${result.url} from ${result.referrer}\n`
+        if (!okCodes[result.status]) okCodes[result.status] = [];
+        okCodes[result.status].push(`${result.url} from ${result.referrer}`);
     });
-    if (report.ok.length == 0) ok += "-- NONE --\n";
 
-    let warn = `WARN (${report.warn.length}):\n`;
     report.warn.forEach(result => {
-        warn += `${result.url} from ${result.referrer}\n`
+        if (!warnCodes[result.status]) warnCodes[result.status] = [];
+        warnCodes[result.status].push(`${result.url} from ${result.referrer}`);
     });
-    if (report.warn.length == 0) warn += "-- NONE --\n";
 
-    let error = `ERROR (${report.error.length}):\n`;
     report.error.forEach(result => {
-        error += `${result.url} from ${result.referrer}\n`
+        if (!errorCodes[result.status]) errorCodes[result.status] = [];
+        errorCodes[result.status].push(`${result.url} from ${result.referrer}`);
     });
-    if (report.error.length == 0) error += "-- NONE --\n";
 
-    return `${ok}\n${warn}\n${error}\n\n${report.omit.length} URLs were scanned but ommited.`;
+    let content = `CRAWL REPORT FOR ${host}\n${(new Date()).toLocaleString("en-US")}\n\n------\n| OK |\n------`;
+
+    for (let code in okCodes) {
+        content += `\n${code}:\n\t`;
+
+        content += okCodes[code].join("\n\t");
+    }
+
+    content += "\n\n--------\n| WARN |\n--------";
+
+    for (let code in warnCodes) {
+        content += `\n${code}:\n\t`;
+
+        content += warnCodes[code].join("\n\t");
+    }
+
+    content += "\n\n---------\n| ERROR |\n---------";
+
+    for (let code in errorCodes) {
+        content += `\n${code}:\n\t`;
+
+        content += errorCodes[code].join("\n\t");
+    }
+
+    content += `\n\n${report.omit.length} URLs were scanned but ommited.`;
+
+    return content;
 };

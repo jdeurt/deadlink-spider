@@ -118,12 +118,15 @@ class Spider {
      * @returns {Promise<{url: string, result: "OK"|"WARN"|"ERROR", referrer: string, status: number, next?: Array<string>}>}
      */
     async crawlTo(url, referrer) {
+        this.log("\n\n\n\n\n");
         this.urls.push(url);
 
         this.log(`Working on ${url} (from ${referrer})`);
 
         return new Promise((resolve, reject) => {
             if (!referrer.includes(this.domain)) {
+                this.log("Omitted because refferer is not part of the original host.");
+
                 return resolve({
                     url: url,
                     result: "OMIT",
@@ -137,30 +140,50 @@ class Spider {
                 if (url.includes(str)) isBlacklisted = true;
             });
             if (isBlacklisted) {
+                this.log("Blacklisted URL!");
+
                 return resolve({
                     url: url,
-                    result: "ERROR",
+                    result: "WARN",
                     referrer,
-                    status: 0
+                    status: -1
                 });
             }
 
-            got(url).then(resp => {
-                if (resp.statusCode < 200 || resp.statusCode > 299) {
+            got(url, { throwHttpErrors: false }).then(resp => {
+                if (resp.statusCode < 200) {
                     this.log(`${url} responded with ${resp.statusCode} (from ${referrer}).`);
 
                     resolve({
-                        url: url,
+                        url,
                         result: "WARN",
                         referrer,
                         status: resp.statusCode
                     });
+                } else if (resp.statusCode > 399) {
+                    this.log(`${url} responded with ${resp.statusCode} (from ${referrer}).`);
+
+                    if (!resp.headers["content-type"].includes("html")) {
+                        resolve({
+                            url,
+                            result: "WARN",
+                            referrer,
+                            status: resp.statusCode
+                        });
+                    } else {
+                        resolve({
+                            url,
+                            result: "ERROR",
+                            referrer,
+                            status: resp.statusCode
+                        });
+                    }
                 } else {
                     if (!resp.headers["content-type"].includes("html")) {
                         this.log(`${url} responded with 2XX but isn't readable (from ${referrer}).`);
 
                         resolve({
-                            url: url,
+                            url,
                             result: "OK",
                             referrer,
                             status: resp.statusCode,
@@ -202,7 +225,7 @@ class Spider {
                         this.log(`Found URLs:\n${next}`);
 
                         resolve({
-                            url: url,
+                            url,
                             result: "OK",
                             referrer,
                             status: resp.statusCode,
