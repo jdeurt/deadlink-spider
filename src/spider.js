@@ -17,6 +17,7 @@ class Spider {
         this.crawlPath = [];
         this.urls = [];
         this.working = false;
+        this.currentTask = "";
         this.report = {
             ok: [],
             warn: [],
@@ -67,6 +68,17 @@ class Spider {
         this.working = false;
     }
 
+    async taskEnd() {
+        return new Promise(resolve => {
+            let intervalID = setInterval(() => {
+                if (!this.currentTask) {
+                    clearInterval(intervalID);
+                    resolve();
+                }
+            }, 500);
+        });
+    }
+
     /**
      * Loop function for crawling the website.
      * @param {string} url The URL to crawl.
@@ -76,10 +88,13 @@ class Spider {
 
         let result = await this.crawlToSave(url, referrer);
 
+        this.currentTask = "";
+
         if (result.result === "OK") {
-            result.next.forEach(nextUrl => {
-                this.crawl(nextUrl, url);
-            });
+            for (let i = 0; i < result.next.length; i++) {
+                await this.taskEnd();
+                this.crawl(result.next[i], url);
+            }
         }
     }
 
@@ -118,8 +133,8 @@ class Spider {
      * @returns {Promise<{url: string, result: "OK"|"WARN"|"ERROR", referrer: string, status: number, next?: Array<string>}>}
      */
     async crawlTo(url, referrer) {
-        this.log("\n\n\n\n\n");
-        this.urls.push(url);
+        this.log("\n\n");
+        this.urls.push(url.replace(/\/$/, ""));
 
         this.log(`Working on ${url} (from ${referrer})`);
 
@@ -204,6 +219,7 @@ class Spider {
 
                         let next = urls.filter(nextUrl => {
                             let temp;
+
                             if (nextUrl.startsWith("//")) {
                                 temp = "http:" + nextUrl;
                             } else if (nextUrl.startsWith("/")) {
@@ -211,7 +227,8 @@ class Spider {
                             } else {
                                 temp = nextUrl;
                             }
-                            return (!this.urls.includes(temp))
+
+                            return (!this.urls.includes(temp.replace(/\/$/, "")));
                         }).map(nextUrl => {
                             if (nextUrl.startsWith("//")) {
                                 return "http:" + nextUrl;
