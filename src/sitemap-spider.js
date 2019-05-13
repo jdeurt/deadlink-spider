@@ -120,7 +120,9 @@ class Spider {
 
     async getPageURLs(url) {
         return new Promise(resolve => {
-            got.get(url).then(resp => {
+            got.get(url, {
+                timeout: 1000 * 30
+            }).then(resp => {
                 if (!resp.headers["content-type"].includes("html")) {
                     this.report.ok.push({
                         url,
@@ -187,7 +189,8 @@ class Spider {
             }
 
             got.get(url, {
-                throwHttpErrors: false
+                throwHttpErrors: false,
+                timeout: 1000 * 30
             }).then(resp => {
                 if (resp.statusCode < 200) {
                     this.log(`\tGot status code ${resp.statusCode}`);
