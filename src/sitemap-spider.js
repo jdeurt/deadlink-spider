@@ -1,4 +1,6 @@
 const got = require("got");
+const readline = require("readline");
+const table = require("text-table");
 const cheerio = require("cheerio");
 const Sitemapper = require("sitemapper");
 
@@ -29,30 +31,20 @@ class Spider {
     }
 
     /**
-     * If verbose mode is enabled, logs to console.
-     * @param {any} content The content to log.
-     */
-    log(content) {
-        if (!this.verbose) return;
-
-        console.log(content);
-    }
-
-    /**
      * Starts the Spider.
      */
     start() {
-        this.log("Starting...");
+        console.log("Starting...");
 
         this.working = true;
 
-        this.log("Retrieving sitemap...");
+        console.log("Retrieving sitemap...");
         let sitemap = new Sitemapper();
 
         sitemap.fetch(this.sitemapURL).then(sites => {
             this.sitemap = sites.sites;
 
-            this.log("Got sitemap. Starting crawling...");
+            console.log("Got sitemap!");
 
             this.startCrawling();
         }).catch(err => this.stop());
@@ -62,23 +54,33 @@ class Spider {
      * Stops the spider.
      */
     stop() {
-        this.log("Stopped.");
         this.working = false;
     }
 
     async startCrawling() {
-        console.log("\n\n\n\n\nPopulating queue...");
-
-        process.stdout.write("[" + "=".repeat(0) + " ".repeat(100) + `] (0/${this.sitemap.length})`);
+        readline.cursorTo(process.stdout, 0, 0);
+        readline.clearScreenDown(process.stdout);
+        process.stdout.write("\n\n\nPopulating queue...\n\n[" + " ".repeat(100) + `] (0/${this.sitemap.length})`);
+        readline.cursorTo(process.stdout, 0, 10);
 
         for (let i = 0; i < this.sitemap.length; i++) {
-            let urls = await this.getPageURLs(this.sitemap[i]);
-
             let prog = Math.round((100 * (i + 1)) / this.sitemap.length);
 
-            process.stdout.clearLine();
-            process.stdout.cursorTo(0);
-            process.stdout.write("[" + "=".repeat(prog) + " ".repeat(100 - prog) + `] (${i + 1}/${this.sitemap.length}) - ${this.sitemap[i]}`);
+            readline.cursorTo(process.stdout, 0, 5);
+            readline.clearLine(process.stdout, 0);
+            readline.cursorTo(process.stdout, 0, 6);
+            readline.clearLine(process.stdout, 0);
+            readline.cursorTo(process.stdout, 0, 7);
+            readline.clearLine(process.stdout, 0);
+            readline.cursorTo(process.stdout, 0, 8);
+            readline.clearLine(process.stdout, 0);
+            readline.cursorTo(process.stdout, 0, 9);
+            readline.clearLine(process.stdout, 0);
+            readline.cursorTo(process.stdout, 0, 5);
+            process.stdout.write("[" + "=".repeat(prog) + " ".repeat(100 - prog) + `] (${i + 1}/${this.sitemap.length})\n${this.sitemap[i]}`);
+            readline.cursorTo(process.stdout, 0, 0);
+
+            let urls = await this.getPageURLs(this.sitemap[i]);
 
             await new Promise(resolve => setTimeout(resolve, this.delay));
 
@@ -90,24 +92,29 @@ class Spider {
             }));
         }
 
-        process.stdout.write("\n\n");
-
-        this.log("Queue populated!");
-        this.log("\t" + this.queue.map(entry => entry.url).join("\n\t"));
-
-        console.log(`Starting crawl (${this.queue.length} URLs)...`);
-
-        process.stdout.write("[" + "=".repeat(0) + " ".repeat(100) + `] (0/${this.queue.length})`);
+        readline.cursorTo(process.stdout, 0, 0);
+        readline.clearScreenDown(process.stdout);
+        process.stdout.write("\n\n\nCrawling URLs...\n\n[" + " ".repeat(100) + `] (0/${this.queue.length})`);
+        readline.cursorTo(process.stdout, 0, 10);
 
         for (let i = 0; i < this.queue.length; i++) {
-            this.log(`\n\n[${i + 1}/${this.queue.length}] Crawling ${this.queue[i].url} (from ${this.queue[i].referrer}).`);
-            await this.checkStatusCode(this.queue[i].url, this.queue[i].referrer);
-
             let prog = Math.round((100 * (i + 1)) / this.queue.length);
 
-            process.stdout.clearLine();
-            process.stdout.cursorTo(0);
-            process.stdout.write("[" + "=".repeat(prog) + " ".repeat(100 - prog) + `] (${i + 1}/${this.queue.length}) - ${this.queue[i]}`);
+            readline.cursorTo(process.stdout, 0, 5);
+            readline.clearLine(process.stdout, 0);
+            readline.cursorTo(process.stdout, 0, 6);
+            readline.clearLine(process.stdout, 0);
+            readline.cursorTo(process.stdout, 0, 7);
+            readline.clearLine(process.stdout, 0);
+            readline.cursorTo(process.stdout, 0, 8);
+            readline.clearLine(process.stdout, 0);
+            readline.cursorTo(process.stdout, 0, 9);
+            readline.clearLine(process.stdout, 0);
+            readline.cursorTo(process.stdout, 0, 5);
+            process.stdout.write("[" + "=".repeat(prog) + " ".repeat(100 - prog) + `] (${i + 1}/${this.queue.length})\n${this.queue[i].url}`);
+            readline.cursorTo(process.stdout, 0, 0);
+
+            await this.checkStatusCode(this.queue[i].url, this.queue[i].referrer);
 
             await new Promise(resolve => setTimeout(resolve, this.delay));
         }
@@ -131,6 +138,16 @@ class Spider {
                         status: resp.statusCode
                     });
 
+                    readline.cursorTo(process.stdout, 0, 10);
+                    readline.clearScreenDown(process.stdout);
+                    process.stdout.write(table([
+                        ["Errors", ":", this.report.error.length],
+                        ["Queue Size", ":", this.queue.length]
+                    ], {
+                        align: ["r", "c", "l"]
+                    }));
+                    readline.cursorTo(process.stdout, 0, 0);
+
                     return resolve(false);
                 }
 
@@ -147,24 +164,42 @@ class Spider {
                     }
 
                     elemUrl = elemUrl.replace(/\/$/, "");
+                    let strippedElemUrl = elemUrl.replace(/https?:\/\//, "");
 
-                    if (!this.urls.includes(elemUrl.replace(/https?:\/\//, ""))) {
-                        this.urls.push(elemUrl.replace(/https?:\/\//, ""));
+                    if (!this.urls.includes(strippedElemUrl)) {
+                        this.urls.push(strippedElemUrl);
                         urlList.push(elemUrl);
+
+                        readline.cursorTo(process.stdout, 0, 10);
+                        readline.clearScreenDown(process.stdout);
+                        process.stdout.write(table([
+                            ["Errors", ":", this.report.error.length],
+                            ["Queue Size", ":", this.queue.length]
+                        ], {
+                            align: ["r", "c", "l"]
+                        }));
+                        readline.cursorTo(process.stdout, 0, 0);
                     }
                 });
 
                 resolve(urlList);
             }).catch(err => {
-                this.log(`Error when attempting to fetch data from ${url}.`);
-                this.log(err);
-
                 this.report.error.push({
                     url,
                     result: "ERROR",
                     referrer: "SITEMAP",
-                    status: -1
+                    status: err.code
                 });
+
+                readline.cursorTo(process.stdout, 0, 10);
+                readline.clearScreenDown(process.stdout);
+                process.stdout.write(table([
+                    ["Errors", ":", this.report.error.length],
+                    ["Queue Size", ":", this.queue.length]
+                ], {
+                    align: ["r", "c", "l"]
+                }));
+                readline.cursorTo(process.stdout, 0, 0);
 
                 resolve(false);
             });
@@ -178,23 +213,33 @@ class Spider {
                 if (url.includes(str)) isBlacklisted = true;
             });
             if (isBlacklisted) {
-                this.log("\tBlacklisted URL!");
-
-                return resolve({
+                this.report.warn.push({
                     url: url,
                     result: "WARN",
                     referrer,
-                    status: -1
+                    status: "BLACKLISTED"
                 });
+
+                readline.cursorTo(process.stdout, 0, 10);
+                readline.clearScreenDown(process.stdout);
+                process.stdout.write(table([
+                    ["OK", ":", this.report.ok.length],
+                    ["WARN", ":", this.report.warn.length],
+                    ["ERROR", ":", this.report.error.length],
+                    ["OMIT", ":", this.report.omit.length]
+                ], {
+                    align: ["r", "c", "l"]
+                }));
+                readline.cursorTo(process.stdout, 0, 0);
+
+                return resolve();
             }
 
-            got.get(url, {
+            got.head(url, {
                 throwHttpErrors: false,
-                timeout: 1000 * 30
+                timeout: 1000 * 10
             }).then(resp => {
                 if (resp.statusCode < 200) {
-                    this.log(`\tGot status code ${resp.statusCode}`);
-
                     this.report.warn.push({
                         url,
                         result: "WARN",
@@ -202,10 +247,20 @@ class Spider {
                         status: resp.statusCode
                     });
 
+                    readline.cursorTo(process.stdout, 0, 10);
+                    readline.clearScreenDown(process.stdout);
+                    process.stdout.write(table([
+                        ["OK", ":", this.report.ok.length],
+                        ["WARN", ":", this.report.warn.length],
+                        ["ERROR", ":", this.report.error.length],
+                        ["OMIT", ":", this.report.omit.length]
+                    ], {
+                        align: ["r", "c", "l"]
+                    }));
+                    readline.cursorTo(process.stdout, 0, 0);
+
                     resolve();
                 } else if (resp.statusCode > 399) {
-                    this.log(`\tGot status code ${resp.statusCode}`);
-
                     this.report.error.push({
                         url,
                         result: "ERROR",
@@ -213,10 +268,20 @@ class Spider {
                         status: resp.statusCode
                     });
 
+                    readline.cursorTo(process.stdout, 0, 10);
+                    readline.clearScreenDown(process.stdout);
+                    process.stdout.write(table([
+                        ["OK", ":", this.report.ok.length],
+                        ["WARN", ":", this.report.warn.length],
+                        ["ERROR", ":", this.report.error.length],
+                        ["OMIT", ":", this.report.omit.length]
+                    ], {
+                        align: ["r", "c", "l"]
+                    }));
+                    readline.cursorTo(process.stdout, 0, 0);
+
                     resolve();
                 } else {
-                    this.log(`\tGot status code ${resp.statusCode}`);
-
                     this.report.ok.push({
                         url,
                         result: "OK",
@@ -224,12 +289,21 @@ class Spider {
                         status: resp.statusCode
                     });
 
+                    readline.cursorTo(process.stdout, 0, 10);
+                    readline.clearScreenDown(process.stdout);
+                    process.stdout.write(table([
+                        ["OK", ":", this.report.ok.length],
+                        ["WARN", ":", this.report.warn.length],
+                        ["ERROR", ":", this.report.error.length],
+                        ["OMIT", ":", this.report.omit.length]
+                    ], {
+                        align: ["r", "c", "l"]
+                    }));
+                    readline.cursorTo(process.stdout, 0, 0);
+
                     resolve();
                 }
             }).catch(err => {
-                this.log(`Error when attempting to work on ${url} (from ${referrer}).`);
-                this.log(err);
-
                 if (url.toLowerCase().startsWith("mailto:") || url.toLowerCase().endsWith(".css") || url.toLowerCase().endsWith(".pdf")) {
                     this.report.omit.push({
                         url: url,
@@ -237,6 +311,18 @@ class Spider {
                         referrer,
                         status: 0
                     });
+
+                    readline.cursorTo(process.stdout, 0, 10);
+                    readline.clearScreenDown(process.stdout);
+                    process.stdout.write(table([
+                        ["OK", ":", this.report.ok.length],
+                        ["WARN", ":", this.report.warn.length],
+                        ["ERROR", ":", this.report.error.length],
+                        ["OMIT", ":", this.report.omit.length]
+                    ], {
+                        align: ["r", "c", "l"]
+                    }));
+                    readline.cursorTo(process.stdout, 0, 0);
 
                     resolve();
                 } else {
@@ -246,6 +332,18 @@ class Spider {
                         referrer,
                         status: err.code
                     });
+
+                    readline.cursorTo(process.stdout, 0, 10);
+                    readline.clearScreenDown(process.stdout);
+                    process.stdout.write(table([
+                        ["OK", ":", this.report.ok.length],
+                        ["WARN", ":", this.report.warn.length],
+                        ["ERROR", ":", this.report.error.length],
+                        ["OMIT", ":", this.report.omit.length]
+                    ], {
+                        align: ["r", "c", "l"]
+                    }));
+                    readline.cursorTo(process.stdout, 0, 0);
 
                     resolve();
                 }
