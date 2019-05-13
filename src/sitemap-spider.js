@@ -66,7 +66,7 @@ class Spider {
     }
 
     async startCrawling() {
-        console.log("Populating queue...");
+        console.log("\n\n\n\n\nPopulating queue...");
 
         process.stdout.write("[" + "=".repeat(0) + " ".repeat(100) + `] (0/${this.sitemap.length})`);
 
@@ -113,7 +113,7 @@ class Spider {
 
         process.stdout.write("\n\n");
 
-        this.log("Done!");
+        console.log(`Crawl finished with the folowing stats:\n\tPages crawled: ${this.queue.length}\n\tPages with no errors: ${this.report.ok.length}\n\tPages with errors: ${this.report.warn.length + this.report.error.length}\n\tOmitted pages: ${this.report.omit.length}`);
         this.stop();
     }
 
