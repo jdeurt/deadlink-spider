@@ -161,7 +161,7 @@ class Spider {
                     if (elemUrl.startsWith("//")) {
                         elemUrl = "http:" + elemUrl;
                     } else if (elemUrl.startsWith("/")) {
-                        elemUrl = url + elemUrl;
+                        elemUrl = url.replace(/\/$/, "") + elemUrl;
                     }
 
                     elemUrl = elemUrl.replace(/\/$/, "");
