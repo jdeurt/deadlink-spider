@@ -9,12 +9,13 @@ class Spider {
      * @param {string[]} blacklist An array of URLs that should NEVER appear in the scan.
      * @param {boolean} verbose Whether or not to log steps to the console.
      */
-    constructor(sitemapURL, blacklist = [], verbose = false) {
+    constructor(sitemapURL, blacklist = [], verbose = false, delay = 100) {
         if (!sitemapURL.startsWith("http")) domain = "http://" + domain;
 
         this.sitemapURL = sitemapURL;
         this.blacklist = blacklist;
         this.verbose = verbose;
+        this.delay = delay;
         this.sitemap = [];
         this.queue = [];
         this.urls = [];
@@ -79,7 +80,7 @@ class Spider {
             process.stdout.cursorTo(0);
             process.stdout.write("[" + "=".repeat(prog) + " ".repeat(100 - prog) + `] (${i + 1}/${this.sitemap.length})`);
 
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, this.delay));
 
             if (urls) this.queue.push(...urls.map(url => {
                 return {
@@ -108,7 +109,7 @@ class Spider {
             process.stdout.cursorTo(0);
             process.stdout.write("[" + "=".repeat(prog) + " ".repeat(100 - prog) + `] (${i + 1}/${this.queue.length})`);
 
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, this.delay));
         }
 
         process.stdout.write("\n\n");
