@@ -240,7 +240,7 @@ class Spider {
                         url: url,
                         result: "ERROR",
                         referrer,
-                        status: 0
+                        status: err.code
                     });
 
                     resolve();
