@@ -8,6 +8,7 @@
   "dependencies": {
     "cheerio": "^1.0.0-rc.2",
     "fs": "0.0.1-security",
-    "got": "^9.5.0"
+    "got": "^9.5.0",
+    "sitemapper": "^2.2.0"
   }
 }

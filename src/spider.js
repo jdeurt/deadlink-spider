@@ -75,7 +75,7 @@ class Spider {
                     clearInterval(intervalID);
                     resolve();
                 }
-            }, 500);
+            }, 100);
         });
     }
 
@@ -93,6 +93,7 @@ class Spider {
         if (result.result === "OK") {
             for (let i = 0; i < result.next.length; i++) {
                 await this.taskEnd();
+                await new Promise(resolve => setTimeout(resolve, 500));
                 this.crawl(result.next[i], url);
             }
         }
