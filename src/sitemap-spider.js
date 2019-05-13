@@ -69,7 +69,7 @@ class Spider {
     async startCrawling() {
         console.log("\n\n\n\n\nPopulating queue...");
 
-        process.stdout.write("[" + "=".repeat(0) + " ".repeat(100) + `] (0/${this.sitemap.length}) - ${this.sitemap[i]}`);
+        process.stdout.write("[" + "=".repeat(0) + " ".repeat(100) + `] (0/${this.sitemap.length})`);
 
         for (let i = 0; i < this.sitemap.length; i++) {
             let urls = await this.getPageURLs(this.sitemap[i]);
@@ -78,7 +78,7 @@ class Spider {
 
             process.stdout.clearLine();
             process.stdout.cursorTo(0);
-            process.stdout.write("[" + "=".repeat(prog) + " ".repeat(100 - prog) + `] (${i + 1}/${this.sitemap.length})`);
+            process.stdout.write("[" + "=".repeat(prog) + " ".repeat(100 - prog) + `] (${i + 1}/${this.sitemap.length}) - ${this.sitemap[i]}`);
 
             await new Promise(resolve => setTimeout(resolve, this.delay));
 
@@ -97,7 +97,7 @@ class Spider {
 
         console.log(`Starting crawl (${this.queue.length} URLs)...`);
 
-        process.stdout.write("[" + "=".repeat(0) + " ".repeat(100) + `] (0/${this.queue.length}) - ${this.queue[i]}`);
+        process.stdout.write("[" + "=".repeat(0) + " ".repeat(100) + `] (0/${this.queue.length})`);
 
         for (let i = 0; i < this.queue.length; i++) {
             this.log(`\n\n[${i + 1}/${this.queue.length}] Crawling ${this.queue[i].url} (from ${this.queue[i].referrer}).`);
@@ -107,7 +107,7 @@ class Spider {
 
             process.stdout.clearLine();
             process.stdout.cursorTo(0);
-            process.stdout.write("[" + "=".repeat(prog) + " ".repeat(100 - prog) + `] (${i + 1}/${this.queue.length})`);
+            process.stdout.write("[" + "=".repeat(prog) + " ".repeat(100 - prog) + `] (${i + 1}/${this.queue.length}) - ${this.queue[i]}`);
 
             await new Promise(resolve => setTimeout(resolve, this.delay));
         }
