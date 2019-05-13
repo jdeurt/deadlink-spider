@@ -12,7 +12,7 @@ class Spider {
      * @param {boolean} verbose Whether or not to log steps to the console.
      */
     constructor(sitemapURL, blacklist = [], verbose = false, delay = 100) {
-        if (!sitemapURL.startsWith("http")) domain = "http://" + domain;
+        if (!sitemapURL.startsWith("http")) sitemapURL = "http://" + sitemapURL;
 
         this.sitemapURL = sitemapURL;
         this.blacklist = blacklist;

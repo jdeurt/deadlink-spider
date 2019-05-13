@@ -1,23 +1,29 @@
 const got = require("got");
+const readline = require("readline");
+const table = require("text-table");
 const cheerio = require("cheerio");
+const Sitemapper = require("sitemapper");
 
 class Spider {
     /**
-     * Creates a Spider.
-     * @param {string} domain The root domain of the website.
+     * Creates a Sitemap Spider.
+     * @param {string} root The root of the website.
      * @param {string[]} blacklist An array of URLs that should NEVER appear in the scan.
-     * @param {boolean} verbose Whether or not to log steps to the console.
+     * @param {number} delay The delay between requests.
      */
-    constructor(domain, blacklist = [], verbose = false) {
-        if (!domain.startsWith("http")) domain = "http://" + domain;
+    constructor(root, blacklist = [], delay = 100) {
+        if (!root.startsWith("http")) root = "http://" + root;
 
-        this.domain = new URL(domain).hostname;
+        this.root = root;
         this.blacklist = blacklist;
-        this.verbose = verbose;
-        this.crawlPath = [];
-        this.urls = [];
+        this.delay = delay;
+        this.sitemap = [];
+        this.queue = [{
+            url: root,
+            referrer: ""
+        }];
+        this.urls = [root.replace(/https?:\/\//, "").replace(/\/$/, "")];
         this.working = false;
-        this.currentTask = "";
         this.report = {
             ok: [],
             warn: [],
@@ -26,129 +32,59 @@ class Spider {
         }
     }
 
-    async waitForIdle() {
-        return new Promise(resolve => {
-            let intervalID = setInterval(() => {
-                if (!this.working) {
-                    this.log("Spider is idle!");
-                    clearInterval(intervalID);
-                    resolve();
-                }
-            }, 1000);
-        });
-    }
-
-    /**
-     * If verbose mode is enabled, logs to console.
-     * @param {any} content The content to log.
-     */
-    log(content) {
-        if (!this.verbose) return;
-
-        console.log(content);
-    }
-
     /**
      * Starts the Spider.
      */
     start() {
-        this.log("Starting...");
-
         this.working = true;
 
-        this.log("Crawling root page...");
-        this.crawl("http://" + this.domain, this.domain);
+        this.startCrawling();
     }
 
     /**
      * Stops the spider.
      */
     stop() {
-        this.log("Stopped.");
         this.working = false;
     }
 
-    async taskEnd() {
+    async startCrawling() {
+        readline.cursorTo(process.stdout, 0, 0);
+        readline.clearScreenDown(process.stdout);
+
+        while (this.queue.length > 0) {
+            readline.cursorTo(process.stdout, 0, 5);
+            readline.clearScreenDown(process.stdout);
+            process.stdout.write(`Working on ${this.queue[0].url} (from ${this.queue[0].referrer}).`);
+
+            readline.cursorTo(process.stdout, 0, 10);
+            readline.clearScreenDown(process.stdout);
+            process.stdout.write(`Queue Size: ${this.queue.length}`);
+
+            await this.crawlURL(this.queue[0].url, this.queue[0].referrer);
+
+            this.queue.shift();
+
+            await new Promise(setTimeout(resolve, this.delay));
+        }
+    }
+
+    /**
+     * Crawl a URL in search of links.
+     * @param {string} url 
+     * @param {string} referrer 
+     */
+    async crawlURL(url, referrer) {
         return new Promise(resolve => {
-            let intervalID = setInterval(() => {
-                if (!this.currentTask) {
-                    clearInterval(intervalID);
-                    resolve();
-                }
-            }, 100);
-        });
-    }
-
-    /**
-     * Loop function for crawling the website.
-     * @param {string} url The URL to crawl.
-     */
-    async crawl(url, referrer) {
-        if (!this.working) return;
-
-        let result = await this.crawlToSave(url, referrer);
-
-        this.currentTask = "";
-
-        if (result.result === "OK") {
-            for (let i = 0; i < result.next.length; i++) {
-                await this.taskEnd();
-                await new Promise(resolve => setTimeout(resolve, 500));
-                this.crawl(result.next[i], url);
-            }
-        }
-    }
-
-    /**
-     * Checks if a URL is part of the root domain.
-     * @param {string} url The URL to test.
-     */
-    urlMatchesDomain(url) {
-        let isValidUrl = true;
-        try {
-            if (new URL(url).hostname != this.domain) isValidUrl = false;
-        } catch (err) {
-            // means the URL isn't valid and will be handled later
-        }
-
-        return isValidUrl;
-    }
-
-    /**
-     * Crawls to a URL and saves the output to the Spider's crawlPath.
-     * @param {string} url The URL to crawl to.
-     * @returns {Promise<{url: string, result: "OK"|"WARN"|"ERROR", referrer: string, status: number, next?: Array<string>}>}
-     */
-    async crawlToSave(url, referrer) {
-        let result = await this.crawlTo(url, referrer);
-
-        this.report[result.result.toLowerCase()].push(result);
-
-        this.crawlPath.push(result);
-        return result;
-    }
-
-    /**
-     * Crawls to a url.
-     * @param {string} url The URL to crawl to.
-     * @returns {Promise<{url: string, result: "OK"|"WARN"|"ERROR", referrer: string, status: number, next?: Array<string>}>}
-     */
-    async crawlTo(url, referrer) {
-        this.log("\n\n");
-        this.urls.push(url.replace(/\/$/, ""));
-
-        this.log(`Working on ${url} (from ${referrer})`);
-
-        return new Promise((resolve, reject) => {
-            if (!referrer.includes(this.domain)) {
-                this.log("Omitted because refferer is not part of the original host.");
-
-                return resolve({
+            if (!referrer.includes(this.root)) {
+                this.report.omit.push({
                     url: url,
                     result: "OMIT",
                     referrer,
                     status: 0
-                })
+                });
+
+                return resolve();
             }
 
             let isBlacklisted = false;
@@ -156,120 +92,83 @@ class Spider {
                 if (url.includes(str)) isBlacklisted = true;
             });
             if (isBlacklisted) {
-                this.log("Blacklisted URL!");
-
-                return resolve({
+                this.report.warn.push({
                     url: url,
                     result: "WARN",
                     referrer,
-                    status: -1
+                    status: "BLACKLISTED"
                 });
             }
 
-            got(url, { throwHttpErrors: false }).then(resp => {
+            got.get(url, {
+                timeout: 1000 * 30,
+                throwHttpErrors: false
+            }).then(resp => {
                 if (resp.statusCode < 200) {
-                    this.log(`${url} responded with ${resp.statusCode} (from ${referrer}).`);
-
-                    resolve({
+                    this.report.warn.push({
                         url,
                         result: "WARN",
                         referrer,
                         status: resp.statusCode
                     });
-                } else if (resp.statusCode > 399) {
-                    this.log(`${url} responded with ${resp.statusCode} (from ${referrer}).`);
 
-                    if (!resp.headers["content-type"].includes("html")) {
-                        resolve({
-                            url,
-                            result: "WARN",
-                            referrer,
-                            status: resp.statusCode
-                        });
-                    } else {
-                        resolve({
-                            url,
-                            result: "ERROR",
-                            referrer,
-                            status: resp.statusCode
-                        });
-                    }
+                    resolve();
+                } else if (resp.statusCode > 399) {
+                    this.report.error.push({
+                        url,
+                        result: "ERROR",
+                        referrer,
+                        status: resp.statusCode
+                    });
+
+                    resolve();
                 } else {
                     if (!resp.headers["content-type"].includes("html")) {
-                        this.log(`${url} responded with 2XX but isn't readable (from ${referrer}).`);
-
-                        resolve({
+                        this.report.ok.push({
                             url,
                             result: "OK",
                             referrer,
-                            status: resp.statusCode,
-                            next: []
-                        });
-                    } else {
-                        this.log(`${url} responded with 2XX. Scanning for URLs... (from ${referrer})`);
-
-                        let urls = [];
-
-                        let $ = cheerio.load(resp.body);
-                        $("*[href*='.'], *[src*='.']").each((i, elem) => {
-                            let url = $(elem).attr("href") || $(elem).attr("src");
-                            if (!urls.includes(url)) {
-                                urls.push(url);
-                            }
+                            status: resp.statusCode
                         });
 
-                        let next = urls.filter(nextUrl => {
-                            let temp;
-
-                            if (nextUrl.startsWith("//")) {
-                                temp = "http:" + nextUrl;
-                            } else if (nextUrl.startsWith("/")) {
-                                temp = url + nextUrl;
-                            } else {
-                                temp = nextUrl;
-                            }
-
-                            return (!this.urls.includes(temp.replace(/\/$/, "")));
-                        }).map(nextUrl => {
-                            if (nextUrl.startsWith("//")) {
-                                return "http:" + nextUrl;
-                            } else if (nextUrl.startsWith("/")) {
-                                return url + nextUrl;
-                            } else {
-                                return nextUrl;
-                            }
-                        });
-
-                        this.log(`Found URLs:\n${next}`);
-
-                        resolve({
-                            url,
-                            result: "OK",
-                            referrer,
-                            status: resp.statusCode,
-                            next: next
-                        });
+                        return resolve();
                     }
+
+                    const $ = cheerio.load(resp.body);
+
+                    $("*[href*='.'], *[src*='.']").each((i, elem) => {
+                        let elemUrl = $(elem).attr("href") || $(elem).attr("src");
+
+                        if (elemUrl.startsWith("//")) {
+                            elemUrl = "http:" + elemUrl;
+                        } else if (elemUrl.startsWith("/")) {
+                            elemUrl = url.replace(/\/$/, "") + elemUrl;
+                        }
+
+                        elemUrl = elemUrl.replace(/\/$/, "");
+                        let strippedElemUrl = elemUrl.replace(/https?:\/\//, "");
+
+                        if (!this.urls.includes(strippedElemUrl)) {
+                            this.urls.push(strippedElemUrl);
+
+                            this.queue.push({
+                                url: elemUrl,
+                                referrer: url
+                            });
+                        }
+                    });
+
+                    resolve();
                 }
             }).catch(err => {
-                this.log(`Error when attempting to work on ${url} (from ${referrer}).`);
-                this.log(err);
-
-                if (url.toLowerCase().startsWith("mailto:") || url.toLowerCase().endsWith(".css") || url.toLowerCase().endsWith(".pdf")) {
-                    resolve({
-                        url: url,
-                        result: "OMIT",
-                        referrer,
-                        status: 0
-                    })
-                }
-
-                resolve({
-                    url: url,
+                this.report.error.push({
+                    url,
                     result: "ERROR",
                     referrer,
-                    status: 0
+                    status: err.code
                 });
+
+                resolve();
             });
         });
     }
