@@ -138,8 +138,8 @@ class Spider {
                     let elemUrl = $(elem).attr("href") || $(elem).attr("src");
 
                     if (elemUrl.startsWith("//")) {
-                        elemUrl = "http:" + url;
-                    } else if (url.startsWith("/")) {
+                        elemUrl = "http:" + elemUrl;
+                    } else if (elemUrl.startsWith("/")) {
                         elemUrl = url + elemUrl;
                     }
 
