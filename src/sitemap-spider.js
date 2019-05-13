@@ -79,14 +79,14 @@ class Spider {
             process.stdout.cursorTo(0);
             process.stdout.write("[" + "=".repeat(prog) + " ".repeat(100 - prog) + `] (${i + 1}/${this.sitemap.length})`);
 
-            this.queue.push(...urls.map(url => {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            if (urls) this.queue.push(...urls.map(url => {
                 return {
                     referrer: this.sitemap[i],
                     url
                 };
             }));
-
-            await new Promise(resolve => setTimeout(resolve, 1000));
         }
 
         process.stdout.write("\n\n");
