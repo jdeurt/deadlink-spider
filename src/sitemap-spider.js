@@ -113,7 +113,7 @@ class Spider {
 
         process.stdout.write("\n\n");
 
-        console.log(`Crawl finished with the folowing stats:\n\tPages crawled: ${this.queue.length}\n\tPages with no errors: ${this.report.ok.length}\n\tPages with errors: ${this.report.warn.length + this.report.error.length}\n\tOmitted pages: ${this.report.omit.length}`);
+        console.log(`Crawl finished with the folowing stats:\n\tPages crawled: ${this.queue.length}\n\tPages with no errors: ${this.report.ok.length}\n\tPages with errors: ${this.report.warn.length + this.report.error.length}\n\tOmitted pages: ${this.report.omit.length}\n\n\n\n\n`);
         this.stop();
     }
 
