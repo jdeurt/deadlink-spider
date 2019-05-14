@@ -23,6 +23,5 @@ process.on("exit", () => {
 
 
 process.on("SIGINT", () => {
-    linkChecker.stop();
-    fs.writeFileSync(`./output/report_${startURL.replace(/\//g, "")}_${Date.now()}.txt`, formatReport(linkChecker.report, startURL));
+    process.exit();
 });
