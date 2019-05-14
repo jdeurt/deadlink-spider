@@ -2,6 +2,7 @@ const got = require("got");
 const readline = require("readline");
 const table = require("text-table");
 const cheerio = require("cheerio");
+const urlLib = require("url");
 const Sitemapper = require("sitemapper");
 
 class Spider {
@@ -158,14 +159,9 @@ class Spider {
                 $("*[href*='.'], *[src*='.']").each((i, elem) => {
                     let elemUrl = $(elem).attr("href") || $(elem).attr("src");
 
-                    if (elemUrl.startsWith("//")) {
-                        elemUrl = "http:" + elemUrl;
-                    } else if (elemUrl.startsWith("/")) {
-                        elemUrl = url.replace(/\/$/, "") + elemUrl;
-                    }
+                    elemUrl = urlLib.resolve(url, elemUrl);
 
-                    elemUrl = elemUrl.replace(/\/$/, "");
-                    let strippedElemUrl = elemUrl.replace(/https?:\/\//, "");
+                    let strippedElemUrl = elemUrl.replace(/https?:\/\//, "").replace(/\/$/, "");
 
                     if (!this.urls.includes(strippedElemUrl)) {
                         this.urls.push(strippedElemUrl);

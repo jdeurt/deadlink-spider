@@ -2,7 +2,7 @@ const got = require("got");
 const readline = require("readline");
 const table = require("text-table");
 const cheerio = require("cheerio");
-const Sitemapper = require("sitemapper");
+const urlLib = require("url");
 
 class Spider {
     /**
@@ -14,13 +14,13 @@ class Spider {
     constructor(root, blacklist = [], delay = 100) {
         if (!root.startsWith("http")) root = "http://" + root;
 
-        this.root = root;
+        this.root = root.replace(/https?:\/\//, "").replace(/\/$/, "");
         this.blacklist = blacklist;
         this.delay = delay;
         this.sitemap = [];
         this.queue = [{
             url: root,
-            referrer: ""
+            referrer: root
         }];
         this.urls = [root.replace(/https?:\/\//, "").replace(/\/$/, "")];
         this.working = false;
@@ -58,15 +58,28 @@ class Spider {
             process.stdout.write(`Working on ${this.queue[0].url} (from ${this.queue[0].referrer}).`);
 
             readline.cursorTo(process.stdout, 0, 10);
-            readline.clearScreenDown(process.stdout);
-            process.stdout.write(`Queue Size: ${this.queue.length}`);
+            process.stdout.write(table([
+                ["Queue Length", ":", this.queue.length],
+                ["", "", ""],
+                ["OK", ":", this.report.ok.length],
+                ["WARN", ":", this.report.warn.length],
+                ["ERROR", ":", this.report.error.length],
+                ["OMIT", ":", this.report.omit.length]
+            ], {
+                align: ["r", "c", "l"]
+            }));
+
+            readline.cursorTo(process.stdout, 0, 20);
 
             await this.crawlURL(this.queue[0].url, this.queue[0].referrer);
 
             this.queue.shift();
 
-            await new Promise(setTimeout(resolve, this.delay));
+            await new Promise(resolve => setTimeout(resolve, this.delay));
         }
+
+        readline.cursorTo(process.stdout, 0, 20);
+        console.log("Done!");
     }
 
     /**
@@ -76,12 +89,23 @@ class Spider {
      */
     async crawlURL(url, referrer) {
         return new Promise(resolve => {
-            if (!referrer.includes(this.root)) {
-                this.report.omit.push({
+            try {
+                if (!(new URL(url).host).includes(this.root)) {
+                    this.report.omit.push({
+                        url: url,
+                        result: "OMIT",
+                        referrer,
+                        status: 0
+                    });
+    
+                    return resolve();
+                }
+            } catch (err) {
+                this.report.error.push({
                     url: url,
-                    result: "OMIT",
+                    result: "ERROR",
                     referrer,
-                    status: 0
+                    status: "ERR_INVALID_URL"
                 });
 
                 return resolve();
@@ -98,6 +122,8 @@ class Spider {
                     referrer,
                     status: "BLACKLISTED"
                 });
+
+                return resolve();
             }
 
             got.get(url, {
@@ -136,17 +162,12 @@ class Spider {
 
                     const $ = cheerio.load(resp.body);
 
-                    $("*[href*='.'], *[src*='.']").each((i, elem) => {
+                    $("*[href], *[src]").each((i, elem) => {
                         let elemUrl = $(elem).attr("href") || $(elem).attr("src");
 
-                        if (elemUrl.startsWith("//")) {
-                            elemUrl = "http:" + elemUrl;
-                        } else if (elemUrl.startsWith("/")) {
-                            elemUrl = url.replace(/\/$/, "") + elemUrl;
-                        }
+                        elemUrl = urlLib.resolve(url, elemUrl);
 
-                        elemUrl = elemUrl.replace(/\/$/, "");
-                        let strippedElemUrl = elemUrl.replace(/https?:\/\//, "");
+                        let strippedElemUrl = elemUrl.replace(/https?:\/\//, "").replace(/\/$/, "");
 
                         if (!this.urls.includes(strippedElemUrl)) {
                             this.urls.push(strippedElemUrl);
@@ -156,6 +177,13 @@ class Spider {
                                 referrer: url
                             });
                         }
+                    });
+
+                    this.report.ok.push({
+                        url,
+                        result: "OK",
+                        referrer,
+                        status: resp.statusCode
                     });
 
                     resolve();
