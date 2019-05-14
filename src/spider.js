@@ -64,7 +64,9 @@ class Spider {
                 ["OK", ":", this.report.ok.length],
                 ["WARN", ":", this.report.warn.length],
                 ["ERROR", ":", this.report.error.length],
-                ["OMIT", ":", this.report.omit.length]
+                ["OMIT", ":", this.report.omit.length],
+                ["", "", "-----"],
+                ["", "", this.report.ok.length + this.report.warn.length + this.report.error.length + this.report.omit.length]
             ], {
                 align: ["r", "c", "l"]
             }));
